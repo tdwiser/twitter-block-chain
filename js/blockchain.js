@@ -185,12 +185,11 @@ function startImporter(data) {
 }
 function doBlock(authenticity_token, user_id, user_name, callback) {
     $.ajax({
-        url: "https://twitter.com/i/user/block",
+        url: "https://twitter.com/i/user/mute",
         method: "POST",
         dataType: 'json',
         data: {
             authenticity_token: authenticity_token,
-            block_user: true,
             impression_id: "",
             report_type: "",
             screen_name: user_name,
@@ -255,7 +254,7 @@ function getProtectedUsers(callback) {
 }
 function startBlockChain() {
     mode = 'block';
-    var result = confirm("Are you sure you want to block all users on this page that you aren't following?");
+    var result = confirm("Are you sure you want to mute all users on this page that you aren't following?");
     if (!result)
         return;
     currentProfileName = getProfileUsername();
@@ -291,7 +290,7 @@ function startExportChain() {
 function startImportChain(data) {
     mode = 'import';
     if (typeof data !== 'undefined') {
-        var result = confirm("Are you sure you want to block all "+data.users.length+" users in the import?");
+        var result = confirm("Are you sure you want to mute all "+data.users.length+" users in the import?");
         if (!result)
             return;
         currentProfileName = data.connection;
@@ -335,7 +334,7 @@ function showDialog() {
     '<div class="modal modal-medium draggable" id="block-or-report-dialog-dialog" role="dialog" aria-labelledby="block-or-report-dialog-header" style="top: 240px; left: 470px;"><div class="js-first-tabstop" tabindex="0"></div>'+
     '<div class="modal-content" role="document">'+
         '<div class="modal-header">'+
-            '<h3 class="modal-title report-title" id="blockchain-dialog-header">Twitter Block Chain</h3>'+
+            '<h3 class="modal-title report-title" id="blockchain-dialog-header">Twitter Mute Chain</h3>'+
         '</div>'+
         '<div class="report-form">'+
             '<p>Found: <span class="usersFound"></span></p>'+

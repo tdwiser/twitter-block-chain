@@ -1,4 +1,11 @@
-# Twitter Block Chain
+# Twitter Mute Chain
+This is a browser extension to mute all followers of a user on Twitter.
+The idea is to mitigate harassment silently, so as not to encourage dog-piling.
+
+My own contributions to this extension are minimal and mainly involve changing the word `block' to `mute' in several places.
+Please direct all praise to the original authors of [Twitter Block Chain](https://github.com/satsukitv/twitter-block-chain).
+
+# Original: Twitter Block Chain
 
 This browser extension helps users who are likely to be, or currently are being dog-piled.
 By navigating to a user's followers (or following) page and activating the 

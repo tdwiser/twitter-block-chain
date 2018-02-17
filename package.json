@@ -1,10 +1,10 @@
 {
-  "name": "twitter-block-chain",
-  "title": "Twitter Block Chain",
-  "id": "twitterblockchain@satsuki.tv",
-  "description": "A twitter blocking tool to block everyone who follows or is followed by a user.",
-  "repository": "satsukitv/twitter-block-chain",
-  "version": "1.7.0",
+  "name": "twitter-mute-chain",
+  "title": "Twitter Mute Chain",
+  "id": "twitter-mute-chain@tdwiser.github.io",
+  "description": "A twitter muting tool to mute everyone who follows or is followed by a user.",
+  "repository": "tdwiser/twitter-mute-chain",
+  "version": "0.1",
   "main": "lib/main.js",
   "icon": "data/icon32.png",
   "icon64": "data/icon64.png",
@@ -14,9 +14,12 @@
   "devDependencies": {
     "grunt": "^0.4.5",
     "grunt-contrib-compress": "^0.13.0",
-    "grunt-contrib-copy": "^0.8.0",
-    "grunt-curl": "~2.2.0",
-    "grunt-jpm": "satsukitv/grunt-jpm",
-    "grunt-mozilla-addon-sdk": "satsukitv/grunt-mozilla-addon-sdk"
+    "grunt-contrib-copy": "^0.8.2",
+    "grunt-curl": "^2.2.1",
+    "grunt-jpm": "github:satsukitv/grunt-jpm",
+    "grunt-mozilla-addon-sdk": "github:satsukitv/grunt-mozilla-addon-sdk"
+  },
+  "dependencies": {
+    "grunt-contrib": "^0.11.0"
   }
 }
