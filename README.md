@@ -2,7 +2,14 @@
 This is a browser extension to mute all followers of a user on Twitter.
 The idea is to mitigate harassment silently, so as not to encourage dog-piling.
 
-My own contributions to this extension are minimal and mainly involve changing the word `block' to `mute' in several places.
+The main challenge is that Twitter has rate limiting for 'muting' API calls, whereas it appears to not enforce these limits for blocks.
+So the maximum rate for muting is about once per 5 seconds.
+(Leave it running in a tab before bed, or perhaps before a long weekend for a large number of mutes.)
+
+There is also a Block->Mute Chain feature, which will convert your account's blocks to mutes (including unblocking the account after it is muted).
+The same rate limit applies, so settle in.
+
+My own contributions to this extension are minimal and mainly involve changing the word `block` to `mute` in several places.
 Please direct all praise to the original authors of [Twitter Block Chain](https://github.com/satsukitv/twitter-block-chain).
 
 # Original: Twitter Block Chain
