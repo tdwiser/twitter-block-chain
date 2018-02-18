@@ -18,7 +18,7 @@ var protectedUsers = {};
 var usersSeenThisRun = {};
 var countUsersSeenThisRun = true;
 var userExport = {};
-var mode = 'block'; // [block, export, import];
+var mode = 'block'; // [block, blockmute, export, import];
 
 var storage = new ExtensionStorage();
 
@@ -27,7 +27,11 @@ if (typeof chrome !== "undefined") {
     function(request, sender, sendResponse) {
         if (typeof request.blockChainStart !== "undefined") {
             if ($(".ProfileNav-item--followers.is-active, .ProfileNav-item--following.is-active").length > 0 || request.blockChainStart == 'import') {
-                sendResponse({ack: true});
+				if (request.blockChainStart == 'blockmute') {
+					sendResponse({error: true, error_description: 'Navigate to your blocked accounts page.'});
+					return null;
+				}
+				sendResponse({ack: true});
                 if (request.blockChainStart == 'block') {
                     startBlockChain();
                 }
@@ -36,7 +40,10 @@ if (typeof chrome !== "undefined") {
                 }
                 else if (request.blockChainStart == 'import') {
                     startImportChain();
-                }
+                } 
+            } else if ($(".blocked-account-nav").length > 0 && request.blockChainStart == 'blockmute'){
+            	sendResponse({ack: true});
+				startBlockMuteChain();
             }
             else {
                 sendResponse({error: true, error_description: 'Navigate to a twitter following or followers page.'});
@@ -46,11 +53,13 @@ if (typeof chrome !== "undefined") {
 }
 else {
     self.port.on("blockChainStart", function(message) {
-        if ($(".ProfileNav-item--followers.is-active, .ProfileNav-item--following.is-active").length > 0 && message.mode != 'import') {
+        if ($(".ProfileNav-item--followers.is-active, .ProfileNav-item--following.is-active").length > 0 && message.mode != 'import' && message.mode != 'blockmute') {
                 self.port.emit("ack",true);
                 startBlockChain();
-            }
-            else {
+            } else if ($(".blocked-account-nav").length > 0 && message.mode == 'blockmute'){
+                self.port.emit("ack",true);
+                startBlockMuteChain();
+            } else {
                 self.port.emit("error",'Navigate to a twitter following or followers page.');
             }
     });
@@ -61,8 +70,13 @@ function getProfileUsername() {
 }
 function startAccountFinder(callback) {
     finderRunning = true;
-    var profileUsername = getProfileUsername();
-    var position = $(".GridTimeline-items").data('min-position');
+    var profileUsername;
+    if(mode != "blockmute") {
+    	profileUsername = getProfileUsername();
+    } else {
+    	profileUsername = "settings";
+    }
+    var position = $(".GridTimeline-items, .stream-container").data('min-position');
     var positionKeyname = "position-"+profileUsername;
     var lastRequestTime = Date.now();
     var apiPart = window.location.href.split("/");
@@ -73,22 +87,43 @@ function startAccountFinder(callback) {
         var scratch_usersFound = 0;
         data.items_html = data.items_html.replace(/src\=\".+\"/g,'').replace(/url\(.+\)/g,'');
         var items_html = $(data.items_html);
-        var users = $.map(items_html.find('.ProfileCard'), function(element) {
-            element = $(element);
-            var username = element.data('screen-name');
-            var id = element.data('user-id');
-            if ($(element).find('.user-actions.following').length > 0 || username in protectedUsers) {
-                scratch_usersSkipped++;
-                return null;
-            }
-            scratch_usersFound++;
-            // only skip already blocked users in block mode
-            if (mode == 'block' && $(element).find('.user-actions.blocked').length > 0) {
-                scratch_usersAlreadyBlocked++;
-                return null;
-            }
-            return {username: username, id: id};
-        });
+        var users;
+        if(mode == "blockmute") {
+			users = $.map(items_html.find('.blocked-setting.account'), function(element) {
+				element = $(element);
+				var subelement = element.find('.user-actions').first();
+				var username = subelement.data('screen-name');
+				var id = subelement.data('user-id');
+				if ($(element).find('.user-actions.following').length > 0 || username in protectedUsers) {
+					scratch_usersSkipped++;
+					return null;
+				}
+				scratch_usersFound++;
+				if ($(element).find('.user-actions.muting').length > 0) {
+					scratch_usersAlreadyBlocked++;
+					doUnblock($("#signout-form input.authenticity_token").val(), id, username);
+					return null;
+				}
+				return {username: username, id: id};
+			});
+        } else {
+			users = $.map(items_html.find('.ProfileCard'), function(element) {
+				element = $(element);
+				var username = element.data('screen-name');
+				var id = element.data('user-id');
+				if ($(element).find('.user-actions.following').length > 0 || username in protectedUsers) {
+					scratch_usersSkipped++;
+					return null;
+				}
+				scratch_usersFound++;
+				// only skip already blocked users in block mode
+				if (mode == 'block' && $(element).find('.user-actions.muting').length > 0) {
+					scratch_usersAlreadyBlocked++;
+					return null;
+				}
+				return {username: username, id: id};
+			});
+        }
         usersFound+=scratch_usersFound;
         usersSkipped+=scratch_usersSkipped;
         usersAlreadyBlocked+=scratch_usersAlreadyBlocked;
@@ -139,11 +174,11 @@ function startAccountFinder(callback) {
     storage.getLocal(positionKeyname, function(data) {
         if (typeof data === "string") position = data;
         processData({
-            items_html: $(".GridTimeline-items").html(),
+            items_html: $(".GridTimeline-items, .stream-container").html(),
             has_more_items: true,
             min_position: position
         });
-        $(".GridTimeline-items").hide();
+        $(".GridTimeline-items, .stream-container").hide();
     })
 }
 function startBlocker() {
@@ -186,6 +221,40 @@ function startImporter(data) {
         }
     },importTimeout);
 }
+
+function doUnblock(authenticity_token, user_id, user_name, callback){
+	$.ajax({
+		url: "https://twitter.com/i/user/unblock",
+		method: "POST",
+		dataType: 'json',
+		data: {
+			authenticity_token: authenticity_token,
+			impression_id: "",
+			report_type: "",
+			screen_name: user_name,
+			user_id: String(user_id)
+		}
+	}).done(function(response) {
+		//console.log(response);
+		//queuedStorage[user_name] = {type: connectionType, connection: currentProfileName, on: Date.now(), id: String(user_id)};
+	}).fail(function(xhr, text, err) {
+		errors++;
+		$("#blockchain-dialog .errorCount").text(errors);
+		console.log(xhr);
+	}).always(function() {
+		// usersBlocked++;
+// 			$("#blockchain-dialog .usersBlocked").text(usersBlocked);
+// 			if ((
+// 					usersBlocked == totalCount 
+// 					|| usersBlocked == usersFound
+// 					|| (mode == 'import' && usersBlocked + errors >= totalCount && totalCount > 0)
+// 				) && totalCount > 0 && !finderRunning) {
+// 				clearInterval(blockerInterval);
+// 				blockerInterval = false;
+// 				saveBlockingReceipts();
+	//	}
+	});
+}
 function doMute(authenticity_token, user_id, user_name, callback) {
     $.ajax({
         url: "https://twitter.com/i/user/mute",
@@ -201,6 +270,9 @@ function doMute(authenticity_token, user_id, user_name, callback) {
     }).done(function(response) {
         //console.log(response);
         queuedStorage[user_name] = {type: connectionType, connection: currentProfileName, on: Date.now(), id: String(user_id)};
+            if(mode == "blockmute") {
+				doUnblock(authenticity_token, user_id, user_name, callback);
+    		}
     }).fail(function(xhr, text, err) {
         errors++;
         $("#blockchain-dialog .errorCount").text(errors);
@@ -259,6 +331,20 @@ function getProtectedUsers(callback) {
 function startBlockChain() {
     mode = 'block';
     var result = confirm("Are you sure you want to mute all users on this page that you aren't following?");
+    if (!result)
+        return;
+    currentProfileName = getProfileUsername();
+    showDialog();
+    getProtectedUsers(function(items) {
+        protectedUsers = items;
+        usersSeenThisRun = {};
+        startAccountFinder();
+        startBlocker();
+    });
+}
+function startBlockMuteChain() {
+    mode = 'blockmute';
+    var result = confirm("Are you sure you want to unblock and mute all users on this page that you aren't following?");
     if (!result)
         return;
     currentProfileName = getProfileUsername();
