@@ -4,7 +4,7 @@
   "id": "twitter-mute-chain@tdwiser.github.io",
   "description": "A twitter muting tool to mute everyone who follows or is followed by a user.",
   "repository": "tdwiser/twitter-mute-chain",
-  "version": "0.1",
+  "version": "0.2",
   "main": "lib/main.js",
   "icon": "data/icon32.png",
   "icon64": "data/icon64.png",
