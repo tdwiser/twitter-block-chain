@@ -57,7 +57,7 @@ module.exports = function(grunt) {
         compress: {
             main: {
                 options: {
-                    archive: 'blockchain.zip'
+                    archive: 'mutechain.zip'
                 },
                 files: [
                     {src: 'js/*', dest: ''},

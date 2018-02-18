@@ -4,7 +4,10 @@ var usersBlocked = 0,
     usersSkipped = 0,
     totalCount = 0,
     errors = 0;
-var batchBlockCount = 5;
+var batchBlockCount = 1;
+var muteTimeout = 5100,
+	exportTimeout = 40,
+	importTimeout = 5100;	
 var finderRunning = true,
     blockerInterval = false;
 var userQueue = new Queue();
@@ -148,13 +151,13 @@ function startBlocker() {
         for (var i=0;i<batchBlockCount;i++) {
             var user = userQueue.dequeue();
             if (typeof user !== "undefined") {
-                doBlock($("#signout-form input.authenticity_token").val(), user.id, user.name);
+                doMute($("#signout-form input.authenticity_token").val(), user.id, user.name);
             }
             else {
                 break;
             }
         }
-    },40);
+    },muteTimeout);
 }
 function startExporter() {
     blockerInterval = setInterval(function() {
@@ -167,7 +170,7 @@ function startExporter() {
                 break;
             }
         }
-    },40);
+    },exportTimeout);
 }
 function startImporter(data) {
     var index = 0;
@@ -177,13 +180,13 @@ function startImporter(data) {
         for(var i = 0; i < batchBlockCount && index < data.users.length; i++) {
             var user = data.users[index];
             if (typeof user !== "undefined") {
-                doBlock($("#signout-form input.authenticity_token").val(), user.id, user.name);
+                doMute($("#signout-form input.authenticity_token").val(), user.id, user.name);
             }
             index++;
         }
-    });
+    },importTimeout);
 }
-function doBlock(authenticity_token, user_id, user_name, callback) {
+function doMute(authenticity_token, user_id, user_name, callback) {
     $.ajax({
         url: "https://twitter.com/i/user/mute",
         method: "POST",
@@ -201,10 +204,11 @@ function doBlock(authenticity_token, user_id, user_name, callback) {
     }).fail(function(xhr, text, err) {
         errors++;
         $("#blockchain-dialog .errorCount").text(errors);
-        //console.log(xhr);
+        console.log(xhr);
     }).always(function() {
         usersBlocked++;
         $("#blockchain-dialog .usersBlocked").text(usersBlocked);
+		$("#blockchain-dialog .timeRemaining").text(((usersFound - usersBlocked - usersSkipped - usersAlreadyBlocked)*muteTimeout/1000.0/60.0).toFixed(1)+" minutes")
         if ((
                 usersBlocked == totalCount 
                 || usersBlocked == usersFound
@@ -338,11 +342,12 @@ function showDialog() {
         '</div>'+
         '<div class="report-form">'+
             '<p>Found: <span class="usersFound"></span></p>'+
-            '<p>Skipped: <span class="usersSkipped"></span></p>'+
-            '<p>Already Blocked: <span class="usersAlreadyBlocked"></span></p>'+
-            '<p><span class="mode">Blocked</span>: <span class="usersBlocked"></span></p>'+
+            '<p>Skipped (Following or Protected): <span class="usersSkipped"></span></p>'+
+            '<p>Already Muted: <span class="usersAlreadyBlocked"></span></p>'+
+            '<p><span class="mode">Muted (this session)</span>: <span class="usersBlocked"></span></p>'+
             '<p>Total: <span class="totalCount"></span></p>'+
             '<p>Errors: <span class="errorCount"></span></p>'+
+			'<p>Time Remaining: <span class="timeRemaining"></span></p>'+
             '<textarea style="width:90%;height:100%;min-height:300px;display:none;" id="ImportExport"></textarea>'+
             '<div style="display:none;"><button class="btn primary-btn" id="ImportStart">Start Import</button></div>'+
         '</div>'+
@@ -360,11 +365,12 @@ function showDialog() {
     '<div class="js-last-tabstop" tabindex="0"></div>'+
 '</div>'
     );
-    $("#blockchain-dialog .mode").text('Blocked');
+    $("#blockchain-dialog .mode").text('Muted (this session)');
     if (mode == 'export') {
         $("#blockchain-dialog .mode").text('Exported');
         $("#blockchain-dialog .usersAlreadyBlocked").parent().hide();
         $("#blockchain-dialog .errorCount").parent().hide();
+		$("#blockchain-dialog .timeRemaining").parent().hide();
     }
     if (mode == 'import') {
         $("#blockchain-dialog #ImportStart").parent().show();
@@ -375,6 +381,7 @@ function showDialog() {
         $("#blockchain-dialog .usersBlocked").parent().hide();
         $("#blockchain-dialog .totalCount").parent().hide();
         $("#blockchain-dialog .errorCount").parent().hide();
+		$("#blockchain-dialog .timeRemaining").parent().hide();
 
         $("#blockchain-dialog .usersAlreadyBlocked").parent().hide();
     }
